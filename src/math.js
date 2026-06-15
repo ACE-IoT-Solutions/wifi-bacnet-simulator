@@ -255,9 +255,6 @@ export function calculateMetrics(config) {
   const totalOfferedLoad = loadUser + loadBacUni + loadBacBcast + loadBacSc;
 
   // 5. Contention and Collision Probability
-  // Total active contending nodes
-  const totalNodes = numUsers + numBacnetDevices;
-  
   // Calculate effective contending nodes (OFDMA reduction)
   // If OFDMA is enabled (ax/be only), BACnet nodes are grouped into RUs, reducing collision probability.
   const isOfdmaActive = wifi.ofdmaSupported && ofdmaEnabled;
@@ -298,12 +295,9 @@ export function calculateMetrics(config) {
   const pDropUnicast = Math.pow(pCollision, 7);
   const deliverUnicastRate = 1 - pDropUnicast;
   
-  let avgAttempts = 1.0;
-  if (pCollision < 0.99) {
-    avgAttempts = (1 - Math.pow(pCollision, 7)) / (1 - pCollision);
-  } else {
-    avgAttempts = 7.0;
-  }
+  const avgAttempts = pCollision < 0.99 
+    ? (1 - Math.pow(pCollision, 7)) / (1 - pCollision) 
+    : 7.0;
 
   // Broadcasts do not retransmit!
   const pDropBroadcast = pCollision;
@@ -327,7 +321,7 @@ export function calculateMetrics(config) {
   const offeredThroughputBac = (lambdaBacUni * bacUniSize + lambdaBacBcast * bacBcastSize + lambdaBacSc * bacBcastSize) * 8;
 
   const actualThroughputUser = offeredThroughputUser * deliverUnicastRate * saturationFactor;
-  let actualThroughputBac = 0;
+  let actualThroughputBac;
   let bacnetLossRate = 0;
 
   if (bacnetProtocol === 'ip') {
@@ -372,7 +366,7 @@ export function calculateMetrics(config) {
   // Successful unicast latency: SIFS + frame + ACK + backoff.
   // With retries, each retry adds a backoff that doubles in window size.
   // If queue is saturated, latency increases exponentially.
-  let avgUnicastLatencyMs = 0;
+  let avgUnicastLatencyMs;
   if (pCollision < 0.99) {
     let latencySum = 0;
     let probSum = 0;

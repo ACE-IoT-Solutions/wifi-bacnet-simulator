@@ -7,11 +7,8 @@ import {
   TrendingUp,
   Info,
   Activity,
-  CheckCircle,
   Zap,
   BookOpen,
-  HelpCircle,
-  RefreshCw,
   Server
 } from 'lucide-react';
 import { WIFI_STANDARDS, USER_PROFILES, calculateMetrics } from './math';
@@ -387,7 +384,7 @@ function App() {
           ap.statusTimer = 250; // show collision color for 250ms
 
           // Spawn collision sparks
-          arrivedPackets.forEach((p) => {
+          arrivedPackets.forEach(() => {
             for (let j = 0; j < 8; j++) {
               const angle = Math.random() * Math.PI * 2;
               const speed = 0.5 + Math.random() * 1.5;
@@ -667,11 +664,11 @@ function App() {
 
   // Compute theoretical vs likely user bandwidths
   const theoreticalUserBandwidth = numUsers > 0 
-    ? (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6) / numUsers 
-    : (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6);
+    ? (metrics.wifiSpecs ? metrics.wifiSpecs.maxRate : WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6) / numUsers 
+    : (metrics.wifiSpecs ? metrics.wifiSpecs.maxRate : WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6);
   
   const likelyUserBandwidth = numUsers > 0 
-    ? metrics.throughputs.actualUser / numUsers 
+    ? theoreticalUserBandwidth * (1 - metrics.bandwidthReduction / 100) 
     : 0;
 
   return (
