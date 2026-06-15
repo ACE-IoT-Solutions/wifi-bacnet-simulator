@@ -663,6 +663,8 @@ function App() {
   const isSaturated = metrics.isSaturated;
   const isSevereLoss = metrics.bacnetLossRate > 15;
 
+  const airtimeLoad = Math.min(100, (100 - metrics.airtime.free));
+
   // Compute theoretical vs likely user bandwidths
   const theoreticalUserBandwidth = numUsers > 0 
     ? (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6) / numUsers 
@@ -974,20 +976,26 @@ function App() {
                 <Zap size={16} />
               </div>
               <div className="metric-value-container">
-                <span className="metric-value">{Math.min(100, (100 - metrics.airtime.free)).toFixed(1)}</span>
+                <span className="metric-value">{airtimeLoad.toFixed(1)}</span>
                 <span className="metric-unit">%</span>
               </div>
               <div className="metric-bar-bg">
                 <div
                   className="metric-bar-fill"
                   style={{
-                    width: `${Math.min(100, (100 - metrics.airtime.free))}%`,
+                    width: `${airtimeLoad}%`,
                     backgroundColor: isSaturated ? 'var(--accent-rose)' : 'var(--accent-cyan)'
                   }}
                 ></div>
               </div>
               <span className="metric-desc">
-                {isSaturated ? 'Medium saturated. Latency spike!' : 'Capacity available'}
+                {airtimeLoad >= 99.9 
+                  ? 'Channel saturated. Latency spike!' 
+                  : airtimeLoad > 75 
+                  ? 'Congested. Minimal capacity left.' 
+                  : airtimeLoad > 40 
+                  ? 'Moderate load. Capacity decreasing.' 
+                  : 'Plenty of capacity headroom'}
               </span>
             </div>
 
