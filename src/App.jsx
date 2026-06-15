@@ -26,6 +26,7 @@ function App() {
   const [bacnetProtocol, setBacnetProtocol] = useState('ip'); // 'ip' or 'sc'
   const [bacnetInterval, setBacnetInterval] = useState(2.0); // seconds
   const [ofdmaEnabled, setOfdmaEnabled] = useState(true);
+  const [frequencyBand, setFrequencyBand] = useState('5'); // '2.4' or '5'
   const [activePreset, setActivePreset] = useState('none');
   const [activeTab, setActiveTab] = useState('simulation'); // 'simulation' or 'analysis'
 
@@ -42,7 +43,8 @@ function App() {
       numBacnetDevices: 120,
       bacnetProtocol: 'ip',
       bacnetInterval: 1.0,
-      ofdmaEnabled: false
+      ofdmaEnabled: false,
+      frequencyBand: '2.4'
     },
     'office': {
       name: 'Smart Office (SC Unicast)',
@@ -52,7 +54,8 @@ function App() {
       numBacnetDevices: 80,
       bacnetProtocol: 'sc',
       bacnetInterval: 5.0,
-      ofdmaEnabled: false
+      ofdmaEnabled: false,
+      frequencyBand: '5'
     },
     'dense-ax': {
       name: 'Modern IoT Facility (Wi-Fi 6 OFDMA)',
@@ -62,7 +65,8 @@ function App() {
       numBacnetDevices: 200,
       bacnetProtocol: 'sc',
       bacnetInterval: 2.0,
-      ofdmaEnabled: true
+      ofdmaEnabled: true,
+      frequencyBand: '5'
     }
   };
 
@@ -76,6 +80,7 @@ function App() {
       setBacnetProtocol(preset.bacnetProtocol);
       setBacnetInterval(preset.bacnetInterval);
       setOfdmaEnabled(preset.ofdmaEnabled);
+      setFrequencyBand(preset.frequencyBand || '5');
       setActivePreset(presetKey);
     }
   };
@@ -94,8 +99,9 @@ function App() {
     numBacnetDevices,
     bacnetProtocol,
     bacnetInterval,
-    ofdmaEnabled
-  }), [wifiStandardId, numUsers, userProfileId, numBacnetDevices, bacnetProtocol, bacnetInterval, ofdmaEnabled]);
+    ofdmaEnabled,
+    frequencyBand
+  }), [wifiStandardId, numUsers, userProfileId, numBacnetDevices, bacnetProtocol, bacnetInterval, ofdmaEnabled, frequencyBand]);
 
   const metrics = useMemo(() => calculateMetrics(config), [config]);
 
@@ -469,7 +475,7 @@ function App() {
       cancelAnimationFrame(animationFrameRef.current);
       window.removeEventListener('resize', handleResize);
     };
-  }, [numUsers, numBacnetDevices, bacnetProtocol, userProfileId, bacnetInterval, metrics.collisionRate, activeTab]);
+  }, [numUsers, numBacnetDevices, bacnetProtocol, userProfileId, bacnetInterval, metrics.collisionRate, activeTab, frequencyBand]);
 
   // --- CHART RENDERING HELPERS (Custom SVG Lines) ---
   const renderLineChart = () => {
@@ -721,6 +727,37 @@ function App() {
                     <span className="wifi-option-desc">{std.year}</span>
                   </button>
                 ))}
+              </div>
+
+              {/* Frequency Band Selector */}
+              <div className="panel-group" style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                <label className="panel-label">Frequency Band</label>
+                <div className="protocol-select" style={{ marginBottom: 0 }}>
+                  <button
+                    className={`protocol-btn ${frequencyBand === '2.4' ? 'active' : ''}`}
+                    onClick={() => handleParamChange(setFrequencyBand, '2.4')}
+                  >
+                    2.4 GHz (IoT)
+                  </button>
+                  <button
+                    className={`protocol-btn ${frequencyBand === '5' ? 'active' : ''}`}
+                    onClick={() => handleParamChange(setFrequencyBand, '5')}
+                  >
+                    5 GHz (Standard)
+                  </button>
+                </div>
+                {wifiStandardId === '11ac' && frequencyBand === '2.4' && (
+                  <div style={{ color: 'var(--accent-amber)', fontSize: '0.7rem', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <AlertTriangle size={12} />
+                    <span>802.11ac is 5GHz-only. Falling back to 11n speeds.</span>
+                  </div>
+                )}
+                {(wifiStandardId === '11b' || wifiStandardId === '11g') && frequencyBand === '5' && (
+                  <div style={{ color: 'var(--accent-amber)', fontSize: '0.7rem', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <AlertTriangle size={12} />
+                    <span>802.11b/g are 2.4GHz-only. Capped at 2.4GHz rates.</span>
+                  </div>
+                )}
               </div>
 
               {/* Dynamic Spec Sheet */}

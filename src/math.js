@@ -145,11 +145,31 @@ export function calculateMetrics(config) {
     numBacnetDevices,
     bacnetProtocol, // 'ip' or 'sc'
     bacnetInterval, // seconds per broadcast / COV update
-    ofdmaEnabled // boolean
+    ofdmaEnabled, // boolean
+    frequencyBand = '5' // '2.4' or '5'
   } = config;
 
   const wifi = WIFI_STANDARDS[wifiStandardId] || WIFI_STANDARDS['11ac'];
   const userProfile = USER_PROFILES[userProfileId] || USER_PROFILES['medium'];
+
+  // Adjust physical rate based on frequency band (2.4 GHz is restricted to 20MHz channels for dense IoT)
+  let maxRate = wifi.maxUnicastRate;
+  if (frequencyBand === '2.4') {
+    if (wifiStandardId === '11n') {
+      maxRate = 72.2 * 1e6; // 20 MHz single stream
+    } else if (wifiStandardId === '11ac') {
+      maxRate = 72.2 * 1e6; // Fallback to 802.11n on 2.4GHz (11ac is 5GHz only)
+    } else if (wifiStandardId === '11ax') {
+      maxRate = 143.4 * 1e6; // 20 MHz single stream (HE20)
+    } else if (wifiStandardId === '11be') {
+      maxRate = 172.0 * 1e6; // 20 MHz single stream (EHT20)
+    }
+  } else {
+    // 5 GHz
+    if (wifiStandardId === '11b' || wifiStandardId === '11g') {
+      // 802.11b and 802.11g are 2.4 GHz only, keep legacy rate limits
+    }
+  }
 
   // 1. Packet configurations
   const generalPacketSize = userProfile.packetSize;
@@ -163,13 +183,20 @@ export function calculateMetrics(config) {
   const bacBcastRate = 1.0 / Math.max(0.1, bacnetInterval); // updates/sec per device
 
   // Unicast and Basic physical rates (apply 80% efficiency to unicast rate for real-world path loss)
-  const unicastRate = wifi.maxUnicastRate * 0.8;
+  const unicastRate = maxRate * 0.8;
   const basicRate = wifi.basicRate;
 
-  // Time overheads in seconds
+  // Time overheads: 2.4 GHz networks often use long slot times (20us) and DIFS (50us) for backward compatibility
+  let slotTime = wifi.slotTime;
+  let difs = wifi.difs;
+  if (frequencyBand === '2.4' && (wifiStandardId === '11g' || wifiStandardId === '11n' || wifiStandardId === '11ac' || wifiStandardId === '11ax' || wifiStandardId === '11be')) {
+    slotTime = 20; // microseconds
+    difs = 50;    // microseconds
+  }
+
   const tSifs = wifi.sifs * 1e-6;
-  const tDifs = wifi.difs * 1e-6;
-  const tSlot = wifi.slotTime * 1e-6;
+  const tDifs = difs * 1e-6;
+  const tSlot = slotTime * 1e-6;
   const tAck = calculateFrameTime(14, basicRate, wifi.preamble);
   const tBackoff = (wifi.cwMin / 2) * tSlot;
 
