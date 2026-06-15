@@ -418,7 +418,13 @@ export function calculateMetrics(config) {
     },
     bacnetLossRate: bacnetLossRate * 100, // percentage
     avgLatencyMs: avgUnicastLatencyMs,
-    isSaturated: totalEffectiveLoad > 1.0
+    isSaturated: totalEffectiveLoad > 1.0,
+    wifiSpecs: {
+      maxRate: maxRate / 1e6, // Mbps
+      basicRate: basicRate / 1e6, // Mbps
+      slotTime: slotTime, // microseconds
+      difs: difs // microseconds
+    }
   };
 }
 

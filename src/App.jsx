@@ -764,19 +764,29 @@ function App() {
               <div className="wifi-spec-sheet">
                 <div className="spec-row">
                   <span className="spec-key">PHY Data Rate (Max):</span>
-                  <span className="spec-val">{(WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6).toFixed(1)} Mbps</span>
+                  <span className="spec-val">
+                    {metrics.wifiSpecs ? metrics.wifiSpecs.maxRate.toFixed(1) : (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6).toFixed(1)} Mbps
+                    {wifiStandardId === '11ac' && frequencyBand === '2.4' && ' (11n Fallback)'}
+                  </span>
                 </div>
                 <div className="spec-row">
                   <span className="spec-key">Basic Broadcast Rate:</span>
-                  <span className="spec-val">{(WIFI_STANDARDS[wifiStandardId].basicRate / 1e6).toFixed(1)} Mbps</span>
+                  <span className="spec-val">
+                    {metrics.wifiSpecs ? metrics.wifiSpecs.basicRate.toFixed(1) : (WIFI_STANDARDS[wifiStandardId].basicRate / 1e6).toFixed(1)} Mbps
+                  </span>
                 </div>
                 <div className="spec-row">
-                  <span className="spec-key">Frequency Band:</span>
-                  <span className="spec-val">{WIFI_STANDARDS[wifiStandardId].frequency}</span>
+                  <span className="spec-key">Active Frequency:</span>
+                  <span className="spec-val">
+                    {frequencyBand} GHz
+                    {(wifiStandardId === '11b' || wifiStandardId === '11g') && frequencyBand === '5' && ' (2.4GHz Only)'}
+                  </span>
                 </div>
                 <div className="spec-row">
                   <span className="spec-key">Contention Slot Time:</span>
-                  <span className="spec-val">{WIFI_STANDARDS[wifiStandardId].slotTime} &mu;s (CW: {WIFI_STANDARDS[wifiStandardId].cwMin})</span>
+                  <span className="spec-val">
+                    {metrics.wifiSpecs ? metrics.wifiSpecs.slotTime : WIFI_STANDARDS[wifiStandardId].slotTime} &mu;s (CW: {WIFI_STANDARDS[wifiStandardId].cwMin})
+                  </span>
                 </div>
               </div>
               
