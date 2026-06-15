@@ -146,7 +146,8 @@ export function calculateMetrics(config) {
     bacnetProtocol, // 'ip' or 'sc'
     bacnetInterval, // seconds per broadcast / COV update
     ofdmaEnabled, // boolean
-    frequencyBand = '5' // '2.4' or '5'
+    frequencyBand = '5', // '2.4' or '5'
+    multicastToUnicast = false
   } = config;
 
   const wifi = WIFI_STANDARDS[wifiStandardId] || WIFI_STANDARDS['11ac'];
@@ -216,9 +217,20 @@ export function calculateMetrics(config) {
     // Uplink (Unicast from device to AP): DIFS + Frame + SIFS + ACK + Backoff
     const tBcastUpFrame = calculateFrameTime(bacBcastSize, unicastRate, wifi.preamble);
     const tBcastUpTx = tDifs + tBcastUpFrame + tSifs + tAck + tBackoff;
-    // Downlink (Broadcast from AP to BSS, at basic rate, no SIFS, no ACK): DIFS + Frame + Backoff
-    const tBcastDownFrame = calculateFrameTime(bacBcastSize, basicRate, wifi.preamble);
-    const tBcastDownTx = tDifs + tBcastDownFrame + tBackoff;
+    
+    let tBcastDownTx;
+    if (multicastToUnicast) {
+      // AP converts the broadcast to a unicast for each other BACnet device (using unicast rate, needing ACK)
+      const tBcastDownUnicastFrame = calculateFrameTime(bacBcastSize, unicastRate, wifi.preamble);
+      const tBcastDownUnicastSingle = tDifs + tBcastDownUnicastFrame + tSifs + tAck + tBackoff;
+      // We send it to all other BACnet devices. Since one device sent it, there are (numBacnetDevices - 1) receivers.
+      const numDestinations = Math.max(0, numBacnetDevices - 1);
+      tBcastDownTx = numDestinations * tBcastDownUnicastSingle;
+    } else {
+      // Downlink (Broadcast from AP to BSS, at basic rate, no SIFS, no ACK): DIFS + Frame + Backoff
+      const tBcastDownFrame = calculateFrameTime(bacBcastSize, basicRate, wifi.preamble);
+      tBcastDownTx = tDifs + tBcastDownFrame + tBackoff;
+    }
     // Total airtime is the sum of both uplink and downlink
     tBacBcastTx = tBcastUpTx + tBcastDownTx;
   } else {
@@ -345,8 +357,12 @@ export function calculateMetrics(config) {
   // 9. Bandwidth Capacity Reduction
   // Capacity loss represents what portion of the channel's absolute theoretical capacity
   // is wasted or unavailable due to overhead, collisions, and queue overflow.
+  const rawBcastDownFrameTime = multicastToUnicast
+    ? Math.max(0, numBacnetDevices - 1) * calculateFrameTime(bacBcastSize, unicastRate, wifi.preamble)
+    : calculateFrameTime(bacBcastSize, basicRate, wifi.preamble);
+
   const rawDataAirtime = (lambdaUser * tUserFrame + lambdaBacUni * tBacUniFrame + 
-                         lambdaBacBcast * (calculateFrameTime(bacBcastSize, unicastRate, wifi.preamble) + calculateFrameTime(bacBcastSize, basicRate, wifi.preamble)) +
+                         lambdaBacBcast * (calculateFrameTime(bacBcastSize, unicastRate, wifi.preamble) + rawBcastDownFrameTime) +
                          lambdaBacSc * (calculateFrameTime(bacBcastSize + 60, unicastRate, wifi.preamble) * 2)) * saturationFactor;
 
   // Airtime details

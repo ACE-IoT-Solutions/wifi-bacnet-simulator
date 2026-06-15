@@ -24,6 +24,7 @@ function App() {
   const [bacnetInterval, setBacnetInterval] = useState(2.0); // seconds
   const [ofdmaEnabled, setOfdmaEnabled] = useState(true);
   const [frequencyBand, setFrequencyBand] = useState('5'); // '2.4' or '5'
+  const [multicastToUnicast, setMulticastToUnicast] = useState(false);
   const [activePreset, setActivePreset] = useState('none');
   const [activeTab, setActiveTab] = useState('simulation'); // 'simulation' or 'analysis'
 
@@ -41,7 +42,8 @@ function App() {
       bacnetProtocol: 'ip',
       bacnetInterval: 1.0,
       ofdmaEnabled: false,
-      frequencyBand: '2.4'
+      frequencyBand: '2.4',
+      multicastToUnicast: false
     },
     'office': {
       name: 'Smart Office (SC Unicast)',
@@ -52,7 +54,8 @@ function App() {
       bacnetProtocol: 'sc',
       bacnetInterval: 5.0,
       ofdmaEnabled: false,
-      frequencyBand: '5'
+      frequencyBand: '5',
+      multicastToUnicast: false
     },
     'dense-ax': {
       name: 'Modern IoT Facility (Wi-Fi 6 OFDMA)',
@@ -63,7 +66,8 @@ function App() {
       bacnetProtocol: 'sc',
       bacnetInterval: 2.0,
       ofdmaEnabled: true,
-      frequencyBand: '5'
+      frequencyBand: '5',
+      multicastToUnicast: false
     }
   };
 
@@ -78,6 +82,7 @@ function App() {
       setBacnetInterval(preset.bacnetInterval);
       setOfdmaEnabled(preset.ofdmaEnabled);
       setFrequencyBand(preset.frequencyBand || '5');
+      setMulticastToUnicast(preset.multicastToUnicast || false);
       setActivePreset(presetKey);
     }
   };
@@ -97,8 +102,9 @@ function App() {
     bacnetProtocol,
     bacnetInterval,
     ofdmaEnabled,
-    frequencyBand
-  }), [wifiStandardId, numUsers, userProfileId, numBacnetDevices, bacnetProtocol, bacnetInterval, ofdmaEnabled, frequencyBand]);
+    frequencyBand,
+    multicastToUnicast
+  }), [wifiStandardId, numUsers, userProfileId, numBacnetDevices, bacnetProtocol, bacnetInterval, ofdmaEnabled, frequencyBand, multicastToUnicast]);
 
   const metrics = useMemo(() => calculateMetrics(config), [config]);
 
@@ -352,9 +358,15 @@ function App() {
         const p = particles[i];
         p.progress += delta * p.speed;
 
-        // Linear interpolation towards AP
-        p.x = p.startX + (ap.x - p.startX) * p.progress;
-        p.y = p.startY + (ap.y - p.startY) * p.progress;
+        if (p.isDownlink) {
+          // Linear interpolation from AP to destination client
+          p.x = p.startX + (p.destX - p.startX) * p.progress;
+          p.y = p.startY + (p.destY - p.startY) * p.progress;
+        } else {
+          // Linear interpolation towards AP
+          p.x = p.startX + (ap.x - p.startX) * p.progress;
+          p.y = p.startY + (ap.y - p.startY) * p.progress;
+        }
 
         // Draw packet glow
         ctx.shadowBlur = 8;
@@ -365,9 +377,11 @@ function App() {
         ctx.fill();
         ctx.shadowBlur = 0; // reset
 
-        // Check arrival at AP
+        // Check arrival
         if (p.progress >= 1.0) {
-          arrivedPackets.push(p);
+          if (!p.isDownlink) {
+            arrivedPackets.push(p);
+          }
           particles.splice(i, 1);
         }
       }
@@ -404,10 +418,37 @@ function App() {
           const successfulPacket = arrivedPackets[0];
           
           if (successfulPacket.type === 'broadcast') {
-            // Trigger AP broadcast shockwave
-            ap.status = 'broadcast';
-            ap.statusTimer = 350;
-            waves.push({ radius: ap.radius, alpha: 0.8 });
+            if (multicastToUnicast) {
+              // Multicast-to-Unicast helper converts it to individual unicasts
+              ap.status = 'idle';
+              ap.statusTimer = 150;
+              
+              // Spawn downlink unicast particles to other BACnet nodes
+              nodes.forEach((node) => {
+                if (node.id !== successfulPacket.nodeId && node.type === 'bacnet') {
+                  particles.push({
+                    x: ap.x,
+                    y: ap.y,
+                    startX: ap.x,
+                    startY: ap.y,
+                    destX: node.x,
+                    destY: node.y,
+                    progress: 0,
+                    speed: 0.003 + Math.random() * 0.002, // slightly faster travel back
+                    color: '#f59e0b', // BACnet yellow
+                    type: 'unicast',
+                    size: 3.5,
+                    nodeId: node.id,
+                    isDownlink: true
+                  });
+                }
+              });
+            } else {
+              // Trigger AP broadcast shockwave
+              ap.status = 'broadcast';
+              ap.statusTimer = 350;
+              waves.push({ radius: ap.radius, alpha: 0.8 });
+            }
 
             // Spawn success rings
             for (let j = 0; j < 5; j++) {
@@ -474,7 +515,7 @@ function App() {
       cancelAnimationFrame(animationFrameRef.current);
       window.removeEventListener('resize', handleResize);
     };
-  }, [numUsers, numBacnetDevices, bacnetProtocol, userProfileId, bacnetInterval, metrics.collisionRate, activeTab, frequencyBand]);
+  }, [numUsers, numBacnetDevices, bacnetProtocol, userProfileId, bacnetInterval, metrics.collisionRate, activeTab, frequencyBand, multicastToUnicast]);
 
   // --- CHART RENDERING HELPERS (Custom SVG Lines) ---
   const renderLineChart = () => {
@@ -910,6 +951,28 @@ function App() {
                   BACnet/SC (TLS Unicast)
                 </button>
               </div>
+              
+              {bacnetProtocol === 'ip' && (
+                <div className="toggle-row" style={{ marginTop: '0.75rem' }}>
+                  <span className="panel-label" style={{ margin: 0, display: 'inline-flex', alignItems: 'center' }}>
+                    <span>Multicast-to-Unicast Helper</span>
+                    <span className="tooltip-container">
+                      <Info size={12} style={{ marginLeft: 4, cursor: 'help' }} />
+                      <span className="tooltip-text">
+                        Converts AP downlink broadcasts to individual unicast transmissions at higher PHY rates. This saves channel airtime for smaller node counts, but causes catastrophic saturation when device counts scale.
+                      </span>
+                    </span>
+                  </span>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={multicastToUnicast}
+                      onChange={(e) => handleParamChange(setMulticastToUnicast, e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* BACnet Broadcast Frequency */}
