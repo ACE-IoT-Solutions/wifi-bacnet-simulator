@@ -469,7 +469,7 @@ function App() {
       cancelAnimationFrame(animationFrameRef.current);
       window.removeEventListener('resize', handleResize);
     };
-  }, [numUsers, numBacnetDevices, bacnetProtocol, userProfileId, bacnetInterval, metrics.collisionRate]);
+  }, [numUsers, numBacnetDevices, bacnetProtocol, userProfileId, bacnetInterval, metrics.collisionRate, activeTab]);
 
   // --- CHART RENDERING HELPERS (Custom SVG Lines) ---
   const renderLineChart = () => {
