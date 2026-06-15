@@ -166,6 +166,9 @@ function App() {
     const particles = [];
     const waves = []; // broadcast waves originating from AP
     const sparks = []; // collision indicators
+    const outerRadius = 145;
+    const bacUniRate = 1.0;
+    const bacBcastRate = 1.0 / Math.max(0.1, bacnetInterval);
 
     // Helper to generate coordinates in rings
     const createNodes = () => {
@@ -190,7 +193,6 @@ function App() {
 
       // BACnet nodes (Outer ring)
       const bacCount = Math.min(24, numBacnetDevices);
-      const outerRadius = 145;
       for (let i = 0; i < bacCount; i++) {
         const angle = ((i + 0.5) / bacCount) * Math.PI * 2;
         nodes.push({
@@ -199,7 +201,7 @@ function App() {
           x: ap.x + Math.cos(angle) * outerRadius,
           y: ap.y + Math.sin(angle) * outerRadius,
           radius: 5,
-          color: bacnetProtocol === 'ip' ? '#f59e0b' : '#10b981',
+          color: bacnetProtocol === 'ip' ? '#f59e0b' : '#c1d301',
           lastTx: 0,
           txInterval: 1000 / (1.0 + 1.0 / bacnetInterval) // polling + broadcast frequency
         });
@@ -328,7 +330,7 @@ function App() {
             } else {
               // BACnet/SC is all green TLS unicast
               packetType = 'sc_unicast';
-              color = '#10b981';
+              color = '#c1d301';
             }
           }
 
@@ -674,9 +676,18 @@ function App() {
     <div className="app-container">
       {/* HEADER SECTION */}
       <header className="app-header">
-        <div className="header-title">
-          <h1>Wi-Fi &amp; BACnet Coexistence Simulator</h1>
-          <p>Analyze CSMA/CA collisions, airtime congestion, and standard scaling limitations</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <a href="https://aceiotsolutions.com" target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+            <img 
+              src="https://aceiotsolutions.com/uploads/ace-logo-3clr@3x.png" 
+              alt="ACE IoT Solutions Logo" 
+              style={{ height: '40px', display: 'block', minWidth: '144px' }} 
+            />
+          </a>
+          <div className="header-title" style={{ borderLeft: '1px solid rgba(255, 255, 255, 0.12)', paddingLeft: '1.25rem' }}>
+            <h1>Wi-Fi &amp; BACnet Coexistence Simulator</h1>
+            <p>Analyze CSMA/CA collisions, airtime congestion, and standard scaling limitations</p>
+          </div>
         </div>
         <div className="presets-container">
           <span className="preset-label">Presets:</span>
@@ -793,9 +804,14 @@ function App() {
               {/* OFDMA Toggle (Conditional for Wi-Fi 6/7) */}
               {WIFI_STANDARDS[wifiStandardId].ofdmaSupported && (
                 <div className="toggle-row">
-                  <span className="panel-label" style={{ margin: 0 }}>
+                  <span className="panel-label" style={{ margin: 0, display: 'inline-flex', alignItems: 'center' }}>
                     <span>Enable OFDMA scheduling</span>
-                    <Info size={12} style={{ marginLeft: 4, cursor: 'help' }} title="OFDMA divides the channel into subchannels (Resource Units), allowing multiple small IoT packets to transmit in parallel without colliding." />
+                    <span className="tooltip-container">
+                      <Info size={12} style={{ marginLeft: 4, cursor: 'help' }} />
+                      <span className="tooltip-text">
+                        OFDMA divides the channel into subchannels (Resource Units), allowing multiple small IoT packets to transmit in parallel without colliding.
+                      </span>
+                    </span>
                   </span>
                   <label className="toggle-switch">
                     <input
@@ -1097,7 +1113,7 @@ function App() {
                     </>
                   ) : (
                     <div className="legend-item">
-                      <span className="legend-color" style={{ backgroundColor: '#10b981' }}></span>
+                      <span className="legend-color" style={{ backgroundColor: '#c1d301' }}></span>
                       <span>BACnet/SC TLS (TCP)</span>
                     </div>
                   )}
@@ -1114,7 +1130,7 @@ function App() {
                 <span className="panel-label">Medium Airtime Breakdown (Channel Utilization)</span>
                 <div className="airtime-bar">
                   <div className="airtime-segment" style={{ width: `${metrics.airtime.user}%`, backgroundColor: '#06b6d4' }} title={`General Unicast: ${metrics.airtime.user.toFixed(1)}%`} />
-                  <div className="airtime-segment" style={{ width: `${metrics.airtime.bacnetUni}%`, backgroundColor: bacnetProtocol === 'ip' ? '#ffc048' : '#10b981' }} title={`BACnet Unicast: ${metrics.airtime.bacnetUni.toFixed(1)}%`} />
+                  <div className="airtime-segment" style={{ width: `${metrics.airtime.bacnetUni}%`, backgroundColor: bacnetProtocol === 'ip' ? '#ffc048' : '#c1d301' }} title={`BACnet Unicast: ${metrics.airtime.bacnetUni.toFixed(1)}%`} />
                   <div className="airtime-segment" style={{ width: `${metrics.airtime.bacnetBcast}%`, backgroundColor: '#f59e0b' }} title={`BACnet Broadcasts: ${metrics.airtime.bacnetBcast.toFixed(1)}%`} />
                   <div className="airtime-segment" style={{ width: `${metrics.airtime.free}%`, backgroundColor: 'rgba(255, 255, 255, 0.05)' }} title={`Free Air: ${metrics.airtime.free.toFixed(1)}%`} />
                 </div>
@@ -1126,7 +1142,7 @@ function App() {
                   </div>
                   <div className="airtime-detail-item">
                     <span>
-                      <span className="airtime-indicator" style={{ backgroundColor: bacnetProtocol === 'ip' ? '#ffc048' : '#10b981' }}></span>
+                      <span className="airtime-indicator" style={{ backgroundColor: bacnetProtocol === 'ip' ? '#ffc048' : '#c1d301' }}></span>
                       BACnet Unicast:
                     </span>
                     <span className="panel-val">{metrics.airtime.bacnetUni.toFixed(1)}%</span>
@@ -1220,9 +1236,9 @@ function App() {
               </div>
 
               <div className="edu-section" style={{ borderLeftColor: 'var(--accent-emerald)' }}>
-                <h4>3. The BACnet/SC Solution</h4>
+                <h4>3. The BACnet/SC Option</h4>
                 <p>
-                  <strong>BACnet Secure Connect (ASHRAE 135-2020)</strong> removes broadcasts entirely. It establishes point-to-point secure TLS (TCP) connections from devices to a Hub. Broadcasts like Who-Is or COV updates are sent as unicast TCP packets to the hub, which forwards them as unicast packets to active subscribers. Because these are standard unicasts, they are sent at full rate, are protected by WMM QoS, use CSMA retries, and can leverage OFDMA parallel slots in Wi-Fi 6.
+                  <strong>BACnet Secure Connect (ASHRAE 135-2020)</strong> is an alternative communication design option that eliminates broadcasts. It establishes point-to-point secure TLS (TCP) connections from devices to a Hub. Broadcasts like Who-Is or COV updates are sent as unicast TCP packets to the hub, which forwards them as unicast packets to active subscribers. Because these are standard unicasts, they are sent at full rate, are protected by WMM QoS, use CSMA retries, and can leverage OFDMA parallel slots in Wi-Fi 6.
                 </p>
               </div>
             </div>
@@ -1233,8 +1249,15 @@ function App() {
 
       {/* FOOTER */}
       <footer className="app-footer">
-        <p>Interactive Coexistence Analysis System &bull; Built in accordance with IEEE 802.11 and ASHRAE 135 Standards</p>
-        <p style={{ opacity: 0.5 }}>Created using React, Canvas Particle Simulations, and Bianchi CSMA/CA Contention Approximations.</p>
+        <p>
+          Interactive Coexistence Analysis System &bull; Powered by{' '}
+          <a href="https://aceiotsolutions.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-ace)', fontWeight: 'bold', textDecoration: 'none' }}>
+            ACE IoT Solutions
+          </a>
+        </p>
+        <p style={{ opacity: 0.5 }}>
+          Built in accordance with IEEE 802.11 and ASHRAE 135 Standards &bull; React, Canvas Particle Simulations, and Bianchi CSMA/CA Contention Approximations.
+        </p>
       </footer>
     </div>
   );

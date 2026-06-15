@@ -647,3 +647,58 @@ input:checked + .toggle-slider:before {
   display: inline-block;
   margin-right: 0.35rem;
 }
+
+/* Custom CSS Tooltips */
+.tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: 240px;
+  background-color: var(--bg-panel-solid);
+  color: var(--text-primary);
+  text-align: left;
+  border-radius: 8px;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 100;
+  bottom: 125%; /* Position above the icon */
+  left: 50%;
+  transform: translateX(-50%);
+  
+  /* Fade in transition */
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none; /* Let clicks pass through */
+}
+
+/* Tooltip arrow */
+.tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--bg-panel-solid) transparent transparent transparent;
+}
+
+/* Show the tooltip text when hovering */
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+

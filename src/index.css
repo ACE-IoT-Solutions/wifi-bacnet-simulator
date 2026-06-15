@@ -13,7 +13,8 @@
   /* Brand Accents */
   --accent-cyan: #06b6d4;
   --accent-purple: #8b5cf6;
-  --accent-emerald: #10b981;
+  --accent-emerald: #c1d301; /* Official ACE Green */
+  --accent-ace: #c1d301;     /* Official ACE Green */
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   
