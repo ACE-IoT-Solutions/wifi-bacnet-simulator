@@ -655,6 +655,15 @@ function App() {
   const isSaturated = metrics.isSaturated;
   const isSevereLoss = metrics.bacnetLossRate > 15;
 
+  // Compute theoretical vs likely user bandwidths
+  const theoreticalUserBandwidth = numUsers > 0 
+    ? (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6) / numUsers 
+    : (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6);
+  
+  const likelyUserBandwidth = numUsers > 0 
+    ? metrics.throughputs.actualUser / numUsers 
+    : 0;
+
   return (
     <div className="app-container">
       {/* HEADER SECTION */}
@@ -967,6 +976,32 @@ function App() {
                   ? (isSevereLoss ? 'Critical broadcast loss (no retries!)' : 'Acceptable broadcast delivery')
                   : '0% physical drops (TCP TLS guarantees delivery)'
                 }
+              </span>
+            </div>
+
+            {/* Metric 5: User Bandwidth (Theoretical vs Likely) */}
+            <div className={`metric-card ${likelyUserBandwidth < (theoreticalUserBandwidth * 0.5) ? 'warning' : 'success'}`}>
+              <div className="metric-header">
+                <span>User Bandwidth</span>
+                <Users size={16} />
+              </div>
+              <div className="metric-value-container">
+                <span className="metric-value">
+                  {numUsers > 0 ? likelyUserBandwidth.toFixed(2) : '0.00'}
+                </span>
+                <span className="metric-unit">Mbps</span>
+              </div>
+              <div className="metric-bar-bg">
+                <div
+                  className="metric-bar-fill"
+                  style={{
+                    width: `${theoreticalUserBandwidth > 0 ? (likelyUserBandwidth / theoreticalUserBandwidth) * 100 : 0}%`,
+                    backgroundColor: likelyUserBandwidth < (theoreticalUserBandwidth * 0.5) ? 'var(--accent-amber)' : 'var(--accent-emerald)'
+                  }}
+                ></div>
+              </div>
+              <span className="metric-desc">
+                Max: {numUsers > 0 ? theoreticalUserBandwidth.toFixed(1) : (WIFI_STANDARDS[wifiStandardId].maxUnicastRate / 1e6).toFixed(1)} Mbps/user
               </span>
             </div>
           </div>
